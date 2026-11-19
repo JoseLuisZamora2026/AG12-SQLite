@@ -22,7 +22,7 @@ class Usuario {
       'apellido_materno': apellidoMaterno.toUpperCase(),
       'telefono': telefono,
       'correo': correo.toUpperCase(),
-      'numero_control': numeroControl,
+      'numero_control': numeroControl.toUpperCase(),
     };
   }
 
