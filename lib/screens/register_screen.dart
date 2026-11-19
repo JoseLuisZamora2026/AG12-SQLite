@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/usuario.dart';
+import '../services/register_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,28 +21,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _correoController = TextEditingController();
   final _numeroControlController = TextEditingController();
 
+  bool _registrando = false;
+
+  final RegisterService _registerService = RegisterService();
+
   // Validar apellidos
   String? validarApellido(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Este campo es obligatorio';
     }
 
-    if (!RegExp(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$")
+    if (!RegExp(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$")
         .hasMatch(value.trim())) {
-      return 'Solo se permiten letras y espacios';
+      return 'Solo se permiten letras';
     }
 
     return null;
   }
 
-  // Validar teléfono
+  // Validar telefono
   String? validarTelefono(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Ingresa tu teléfono';
+    if (value == null || value.trim().isEmpty) {
+      return 'El teléfono es obligatorio';
     }
 
-    if (!RegExp(r'^[0-9]{10}$').hasMatch(value)) {
-      return 'El teléfono debe tener 10 dígitos';
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
+      return 'Ingresa un teléfono de 10 dígitos';
     }
 
     return null;
@@ -50,7 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Validar correo
   String? validarCorreo(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Ingresa tu correo electrónico';
+      return 'El correo es obligatorio';
     }
 
     if (!RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$')
@@ -61,10 +66,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  // Validar número de control
+  // Validar numero de control
   String? validarNumeroControl(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Ingresa tu número de control';
+      return 'El número de control es obligatorio';
     }
 
     if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value.trim())) {
@@ -74,44 +79,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  // Preparar los datos del usuario
-  Usuario obtenerUsuario() {
-    return Usuario(
-      apellidoPaterno:
-      _apellidoPaternoController.text.trim().toUpperCase(),
-      apellidoMaterno:
-      _apellidoMaternoController.text.trim().toUpperCase(),
+  // Registrar usuario en SQLite
+  Future<void> registrar() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final usuario = Usuario(
+      apellidoPaterno: _apellidoPaternoController.text.trim().toUpperCase(),
+      apellidoMaterno: _apellidoMaternoController.text.trim().toUpperCase(),
       telefono: _telefonoController.text.trim(),
       correo: _correoController.text.trim().toUpperCase(),
-      numeroControl:
-      _numeroControlController.text.trim().toUpperCase(),
+      numeroControl: _numeroControlController.text.trim().toUpperCase(),
     );
-  }
 
-  // Validar formulario
-  void registrar() {
-    if (_formKey.currentState!.validate()) {
-      final Usuario usuario = obtenerUsuario();
+    setState(() {
+      _registrando = true;
+    });
 
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Datos validados'),
-          content: Text(
-            'Apellido paterno: ${usuario.apellidoPaterno}\n'
-                'Apellido materno: ${usuario.apellidoMaterno}\n'
-                'Teléfono: ${usuario.telefono}\n'
-                'Correo: ${usuario.correo}\n'
-                'Número de control: ${usuario.numeroControl}',
+    try {
+      final resultado =
+      await _registerService.registrarUsuario(usuario);
+
+      if (!mounted) return;
+
+      if (resultado) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Usuario registrado correctamente'),
+            backgroundColor: Colors.green,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ACEPTAR'),
-            ),
-          ],
+        );
+
+        _formKey.currentState!.reset();
+        _apellidoPaternoController.clear();
+        _apellidoMaternoController.clear();
+        _telefonoController.clear();
+        _correoController.clear();
+        _numeroControlController.clear();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('El número de control ya está registrado'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al registrar usuario: $e'),
+          backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _registrando = false;
+        });
+      }
     }
   }
 
@@ -143,9 +171,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 size: 75,
                 color: Colors.blue,
               ),
-
               const SizedBox(height: 15),
-
               const Text(
                 'Formulario de registro',
                 textAlign: TextAlign.center,
@@ -154,7 +180,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 25),
 
               // Apellido paterno
@@ -168,7 +193,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 validator: validarApellido,
               ),
-
               const SizedBox(height: 15),
 
               // Apellido materno
@@ -182,10 +206,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 validator: validarApellido,
               ),
-
               const SizedBox(height: 15),
 
-              // Teléfono
+              // Telefono
               TextFormField(
                 controller: _telefonoController,
                 keyboardType: TextInputType.phone,
@@ -200,10 +223,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 validator: validarTelefono,
               ),
-
               const SizedBox(height: 15),
 
-              // Correo electrónico
+              // Correo
               TextFormField(
                 controller: _correoController,
                 keyboardType: TextInputType.emailAddress,
@@ -214,10 +236,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 validator: validarCorreo,
               ),
-
               const SizedBox(height: 15),
 
-              // Número de control
+              // Numero de control
               TextFormField(
                 controller: _numeroControlController,
                 textCapitalization: TextCapitalization.characters,
@@ -228,18 +249,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 validator: validarNumeroControl,
               ),
-
               const SizedBox(height: 25),
 
-              // Botón registrar
+              // Boton registrar
               ElevatedButton(
-                onPressed: registrar,
+                onPressed: _registrando ? null : registrar,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text(
+                child: _registrando
+                    ? const CircularProgressIndicator(
+                  color: Colors.white,
+                )
+                    : const Text(
                   'REGISTRAR',
                   style: TextStyle(fontSize: 16),
                 ),

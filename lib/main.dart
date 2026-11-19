@@ -1,3 +1,4 @@
+import 'screens/register_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -18,7 +19,7 @@ class AG12App extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const InicioScreen(),
+      home: const RegisterScreen(),
     );
   }
 }
