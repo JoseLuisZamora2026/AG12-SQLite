@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS usuarios (id INT(11) NOT NULL
 AUTO_INCREMENT,
 apellido_paterno VARCHAR(100) NOT NULL,
 apellido_materno VARCHAR(100) NOT NULL,
-teléfono VARCHAR(20) NOT NUL, 
+telefono VARCHAR(20) NOT NUL, 
 correo VARCHAR (150) NOT NULL, 
 numero_control VARCHAR(30)  NOT NULL,
 
