@@ -1,10 +1,21 @@
-
+using MySqlConnector;
 var builder = WebApplication.CreateBuilder(args);
 
 // Servicios de la aplicación
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.AddScoped<MySqlConnection>(_=>
+{
+var conexion = builder.Configuration.GetConnectionsString("MySql");
 
+if 
+(string.IsNullOrWhiteSpace(conexion))
+{
+throw new InvalidOperationException("Falta configurar la conexion a MySQL.");
+}
+return new 
+MySqlConnection(conexion);
+});
 var app = builder.Build();
 
 // Configuración de la API
