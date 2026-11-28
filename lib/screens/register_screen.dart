@@ -79,7 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  // Registrar usuario en SQLite
+  // Registrar usuario en SQLite mediante la API REST
   Future<void> registrar() async {
     if (!_formKey.currentState!.validate()) {
       return;

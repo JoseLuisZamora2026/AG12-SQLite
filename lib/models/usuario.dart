@@ -25,6 +25,24 @@ class Usuario {
       'numero_control': numeroControl.toUpperCase(),
     };
   }
+  Map<String, dynamic> toJson() {
+    return{
+      'apellidoPaterno': apellidoPaterno.toUpperCase(),
+      'apellidoMaterno': apellidoMaterno.toUpperCase(),
+      'telefono': telefono.toUpperCase(),
+      'correo': correo.toUpperCase(),
+      'numeroControl': numeroControl.toUpperCase(),
+    };
+  }
+  factory Usuario.fromJson(Map<String, dynamic>json){
+    return Usuario(id: json['id']==null ? null : (json['id'] as num).toInt(),
+      apellidoPaterno: json['apellidoPaterno'],
+    apellidoMaterno: json['apellidoMaterno'],
+    telefono: json['telefono'],
+    correo: json['correo'],
+    numeroControl: json['numeroControl'],
+    );
+  }
 
   factory Usuario.fromMap(Map<String, dynamic> map) {
     return Usuario(
