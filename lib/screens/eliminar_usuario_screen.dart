@@ -1,6 +1,6 @@
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../database/usuario_database.dart';
+import 'package:http/http.dart' as http;
 import '../models/usuario.dart';
 
 class EliminarUsuarioScreen extends StatefulWidget {
@@ -12,6 +12,9 @@ class EliminarUsuarioScreen extends StatefulWidget {
 }
 
 class _EliminarUsuarioScreenState extends State<EliminarUsuarioScreen> {
+
+  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL',
+    defaultValue: 'http://localhost:5152',);
   List<Usuario> usuarios = [];
   bool cargando = true;
 
@@ -25,17 +28,43 @@ class _EliminarUsuarioScreenState extends State<EliminarUsuarioScreen> {
     setState(() {
       cargando = true;
     });
+    try {
+      final url = Uri.parse('$apiBaseUrl/api/usuarios');
+      final respuesta = await http.get(url);
 
-    final resultado =
-    await UsuarioDatabase.instance.obtenerUsuarios();
+      if (respuesta.statusCode != 200) {
+        throw Exception('Error HTTP: ${respuesta.statusCode}');
+      }
+      final datos = jsonDecode(utf8.decode(respuesta.bodyBytes),
+      ) as List<dynamic>;
 
-    if (!mounted) return;
+      final resultado = datos.map((item) =>
+          Usuario.fromJson(item as Map<String, dynamic>,)).toList();
 
-    setState(() {
-      usuarios = resultado;
-      cargando = false;
-    });
+      if (!mounted) return;
+
+      setState(() {
+        usuarios = resultado;
+        cargando = false;
+      });
+    } catch (e) {
+      if
+      (!mounted) return;
+       setState(() {
+         cargando = false;
+       });
+      ScaffoldMessenger
+          .of(context
+      ).showSnackBar
+        (
+        SnackBar
+          (content: Text('Error al cargar usuarios:$e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
+
 
   Future<void> confirmarEliminacion(Usuario usuario) async {
     final confirmar = await showDialog<bool>(
@@ -66,8 +95,13 @@ class _EliminarUsuarioScreenState extends State<EliminarUsuarioScreen> {
 
     if (confirmar != true) return;
 
-    final resultado =
-    await UsuarioDatabase.instance.eliminarUsuario(usuario.id!);
+   final id = usuario.id;
+   if (id == null) return;
+
+   final url = Uri.parse('$apiBaseUrl/api/usuarios/$id');
+
+   final respuesta = await http.delete(url);
+   final resultado = respuesta.statusCode == 200 ? 1 :0;
 
     if (!mounted) return;
 
