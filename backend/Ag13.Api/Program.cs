@@ -6,7 +6,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddScoped<MySqlConnection>(_=>
 {
-var conexion = builder.Configuration.GetConnectionsString("MySql");
+var conexion = builder.Configuration.GetConnectionString("MySql");
 
 if 
 (string.IsNullOrWhiteSpace(conexion))
