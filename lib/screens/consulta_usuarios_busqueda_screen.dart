@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../database/usuario_database.dart';
+import 'package:http/http.dart' as http;
 import '../models/usuario.dart';
 
 class ConsultaUsuariosBusquedaScreen extends StatefulWidget {
@@ -19,11 +20,50 @@ class _ConsultaUsuariosBusquedaScreenState extends State<ConsultaUsuariosBusqued
     _filtrar('');
   }
 
-  Future<void> _filtrar(String texto) async {
-    final res = _usarLike
-        ? await UsuarioDatabase.instance.buscarUsuariosLike(texto)
-        : await UsuarioDatabase.instance.buscarUsuariosContains(texto);
-    setState(() => _usuarios = res);
+  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:5152',);
+  Future<void> _filtrar(String texto)
+  async{
+    try{
+      final termino = texto.trim();
+      Uri url;
+
+      if (termino.isEmpty || ! _usarLike) {
+        url = Uri.parse('$apiBaseUrl/api/usuarios');
+      }else{
+        url = Uri.parse('$apiBaseUrl/api/usuarios/buscar') .replace(queryParameters: {'termino': termino});
+      }
+      final respuesta = await http.get(url);
+      if (respuesta.statusCode != 200)
+        {
+          throw Exception('Error HTTP: ${respuesta.statusCode}');
+        }
+      final datos = jsonDecode(utf8.decode(respuesta.bodyBytes),
+      ) as List<dynamic>;
+
+      List<Usuario> resultados = datos.map((item) =>Usuario.fromJson(item as Map<String, dynamic>)).toList();
+
+      if (!_usarLike && termino.isNotEmpty) {
+        final busqueda = termino.toUpperCase();
+
+        resultados = resultados.where((usuario) {
+          return usuario.apellidoPaterno.toUpperCase().contains(busqueda) || usuario.apellidoMaterno.toUpperCase().contains(busqueda) ||
+    usuario.numeroControl.toUpperCase().contains(busqueda);
+    }).toList();
+    }
+
+      if (!mounted) return;
+
+      setState(() {
+        _usuarios = resultados;
+      });
+    } catch (e){
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al consultar usuarios: $e'),
+      backgroundColor: Colors.red,
+      ),
+      );
+    }
   }
 
   @override
@@ -33,7 +73,7 @@ class _ConsultaUsuariosBusquedaScreenState extends State<ConsultaUsuariosBusqued
       body: Column(
         children: [
           SwitchListTile(
-            title: Text(_usarLike ? 'Método: SELECT LIKE (BD)' : 'Método: .contains() (Memoria)'),
+            title: Text(_usarLike ? 'Método: SELECT LIKE (MySQL)' : 'Método: .contains() (Memoria)'),
             value: _usarLike,
             onChanged: (v) => setState(() {
               _usarLike = v;

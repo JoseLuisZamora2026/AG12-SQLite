@@ -1,6 +1,6 @@
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../database/usuario_database.dart';
+import 'package:http/http.dart' as http;
 import '../models/usuario.dart';
 
 class ActualizarUsuarioScreen extends StatefulWidget {
@@ -13,6 +13,8 @@ class ActualizarUsuarioScreen extends StatefulWidget {
 
 class _ActualizarUsuarioScreenState
     extends State<ActualizarUsuarioScreen> {
+  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL',
+    defaultValue: 'http://localhost:5152',);
   List<Usuario> usuarios = [];
   Usuario? seleccionado;
 
@@ -41,14 +43,58 @@ class _ActualizarUsuarioScreenState
   }
 
   Future<void> cargarUsuarios() async {
-    final resultado =
-    await UsuarioDatabase.instance.obtenerUsuarios();
+    try {
+      final url = Uri.parse('$apiBaseUrl/api/usuarios');
+      final respuesta = await http.get(url);
 
-    if (!mounted) return;
+      if (respuesta.statusCode != 200) {
+        throw Exception('Error HTTP: ${respuesta.statusCode}');
+      }
+      final datos = jsonDecode(utf8.decode(respuesta.bodyBytes),
+      ) as List<dynamic>;
 
-    setState(() {
-      usuarios = resultado;
-    });
+      final resultado = datos.map((item) =>
+          Usuario.fromJson(item as Map<String, dynamic>,)).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        usuarios = resultado;
+      });
+    } catch (e) {
+      if
+      (
+      !
+      mounted
+      )
+        return;
+
+      ScaffoldMessenger
+          .
+      of
+        (
+          context
+      )
+          .
+      showSnackBar
+        (
+        SnackBar
+          (
+          content
+              :
+          Text
+            (
+              'Error al cargar usuarios:$e'
+          )
+          ,
+          backgroundColor
+              :
+          Colors.red
+          ,
+        )
+        ,
+      );
+    }
   }
 
   void seleccionarUsuario(Usuario usuario) {
@@ -74,9 +120,28 @@ class _ActualizarUsuarioScreenState
       correo: correoController.text.trim().toUpperCase(),
       numeroControl: controlController.text.trim().toUpperCase(),
     );
+    final id = seleccionado!.id;
+    if(id == null) return;
+    bool actualizado = false;
+    try{
+      final url = Uri.parse('$apiBaseUrl/api/usuarios/$id');
 
-    final actualizado =
-    await UsuarioDatabase.instance.actualizarUsuario(usuario);
+      final respuesta = await http.put(url, headers: {'Content-Type': 'application/json'},
+body: jsonEncode(usuario.toJson()),
+);
+      if(respuesta.statusCode == 200){
+      actualizado = true;
+      } else{
+        throw Exception('Error HTTP: ${respuesta.statusCode}');
+      }
+    }catch (e){
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al actualizar usuario: $e'),
+      backgroundColor: Colors.red,),
+      );
+      return;
+    }
 
     if (!mounted) return;
 
